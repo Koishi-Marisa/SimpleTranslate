@@ -186,25 +186,26 @@ public final class ComponentJsonLayoutGuard {
         // minecraft:default splits that coordinate system (Wynncraft actionbars).
         boolean puaLayoutFont = effectiveCustomFont && text != null
                 && countPrivateUseCodepoints(text) > 0;
-        // Layout fonts encode absolute screen coordinates. Remounting CJK onto
-        // minecraft:default while leaving PUA siblings on the layout font splits
-        // the coordinate system and collapses multi-region actionbars.
+        // Layout fonts encode absolute screen coordinates. Remounting CJK while
+        // leaving PUA siblings on the layout font splits the coordinate system
+        // and collapses multi-region actionbars.
         boolean effectiveDefaultFont = hasDefaultFont(object) || !effectiveCustomFont;
-        if (!effectiveDefaultFont && !effectiveLayoutFont && !puaLayoutFont && text != null) {
-            if (remountCustomFontCjk && containsCjk(text)) {
+        if (!effectiveLayoutFont && !puaLayoutFont && text != null && containsCjk(text)) {
+            if (forceFallbackCjk) {
+                // Server resource packs routinely replace the glyphs behind
+                // Chinese codepoints with their own UI icons, both in their own
+                // font and in minecraft:default. Translated Chinese is therefore
+                // painted with the mod-owned fallback font, whichever font it
+                // would have inherited; only the CJK runs move, so icons,
+                // coordinates and legacy format pairs keep the inherited font.
+                remountCjkRunsOnFallbackFont(object, text);
+            } else if (remountCustomFontCjk && !effectiveDefaultFont) {
                 if (containsProtectedFontRuns(text)) {
                     splitMixedCustomFontText(object, text);
                 } else {
                     object.addProperty("font", "minecraft:default");
                 }
             }
-        } else if (effectiveDefaultFont && !effectiveLayoutFont && forceFallbackCjk) {
-            // Server resource packs routinely replace the glyphs behind Chinese
-            // codepoints with their own UI icons. Translated Chinese must be
-            // painted with the mod-owned fallback font instead of the pack
-            // font; only the CJK runs move, so icons, coordinates and legacy
-            // format pairs keep the inherited font.
-            remountCjkRunsOnFallbackFont(object, text);
         }
 
         boolean childInheritedCustomFont = hasCustomFont(object)
