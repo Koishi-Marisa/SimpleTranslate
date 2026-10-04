@@ -48,6 +48,18 @@ jobs:
         working-directory: ${{ matrix.project }}
         run: ./gradlew build --no-daemon --stacktrace
 
+      # Gradle only prints the first line of a test failure. The JUnit XML keeps
+      # the full stack trace, which is what makes a CI-only failure fixable.
+      - name: Show test failures
+        if: failure()
+        working-directory: ${{ matrix.project }}
+        run: |
+          for f in build/test-results/test/*.xml; do
+            [ -e "$f" ] || continue
+            echo "===== $f"
+            sed -n '1,500p' "$f"
+          done
+
       - name: Upload ${{ matrix.name }} jars
         uses: actions/upload-artifact@v4
         with:
