@@ -49,7 +49,7 @@ public class TokenMonitorScreen extends ScrollableSettingsScreen {
                 buildTotalsLines(),
                 0xFF62D5FF,
                 contentWidth,
-                92));
+                104));
 
         addSectionHeader(text("screen.simple_translate.token_monitor.recent"));
 
@@ -86,8 +86,10 @@ public class TokenMonitorScreen extends ScrollableSettingsScreen {
                                 String.format("%,d", usage.completionTokens())).getString(),
                         Component.translatable("screen.simple_translate.token_monitor.total_tokens",
                                 String.format("%,d", usage.totalTokens())).getString()
-                                + "   " + usage.elapsedMs() + "ms");
-                addEntry(new InfoCardWidget(Component.literal(title), lines, 0xFF7CFFB2, contentWidth, 64));
+                                + "   " + usage.elapsedMs() + "ms",
+                        cacheLine(usage.hasCacheAccounting(),
+                                usage.cacheHitTokens(), usage.cacheMissTokens()));
+                addEntry(new InfoCardWidget(Component.literal(title), lines, 0xFF7CFFB2, contentWidth, 76));
             }
         }
 
@@ -118,7 +120,32 @@ public class TokenMonitorScreen extends ScrollableSettingsScreen {
         lines.add(Component.translatable("screen.simple_translate.token_monitor.total_tokens",
                 String.format("%,d", totals.totalTokens())).getString());
         lines.add(Component.translatable("screen.simple_translate.token_monitor.avg_time", totals.avgElapsedMs()).getString());
+        lines.add(cacheLine(totals.hasCacheAccounting(),
+                totals.cacheHitTokens(), totals.cacheMissTokens()));
         return lines;
+    }
+
+    /**
+     * Cache line shared by the totals card and the per-request cards. The hit
+     * rate is what the prompt layout exists to maximise: DeepSeek bills cached
+     * prompt tokens at roughly a tenth of the uncached price.
+     */
+    private static String cacheLine(boolean accounted, long cacheHitTokens, long cacheMissTokens) {
+        if (!accounted) {
+            return Component.translatable("screen.simple_translate.token_monitor.cache_unavailable").getString();
+        }
+        long accountedTokens = cacheHitTokens + cacheMissTokens;
+        int hitPercent = accountedTokens > 0
+                ? (int) Math.round(100.0D * cacheHitTokens / accountedTokens)
+                : 0;
+        return Component.translatable("screen.simple_translate.token_monitor.cache_hit_tokens",
+                        String.format("%,d", cacheHitTokens)).getString()
+                + "   "
+                + Component.translatable("screen.simple_translate.token_monitor.cache_miss_tokens",
+                        String.format("%,d", cacheMissTokens)).getString()
+                + "   "
+                + Component.translatable("screen.simple_translate.token_monitor.cache_hit_rate",
+                        hitPercent + "%").getString();
     }
 
     private static String shortenSurface(String surface) {

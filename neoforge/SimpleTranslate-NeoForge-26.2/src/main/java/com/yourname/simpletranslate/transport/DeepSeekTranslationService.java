@@ -699,7 +699,8 @@ public class DeepSeekTranslationService implements TranslationService {
             }
             TokenUsageMonitor.record(new TokenUsage(
                     apiFormat, model, prompt, completion, total,
-                    elapsedMs, System.currentTimeMillis(), surface));
+                    elapsedMs, System.currentTimeMillis(), surface,
+                    Math.max(0, usage.cacheHitTokens()), Math.max(0, usage.cacheMissTokens())));
         } catch (Exception ignored) {
         }
     }
@@ -745,7 +746,28 @@ public class DeepSeekTranslationService implements TranslationService {
             if (prompt <= 0 && completion <= 0 && total <= 0) {
                 return null;
             }
-            return new TokenUsage("", "", prompt, completion, total, 0, 0, "");
+            int cacheHit = firstInt(usage,
+                    "prompt_cache_hit_tokens", "promptCacheHitTokens",
+                    "cache_read_input_tokens", "cacheReadInputTokens",
+                    "cachedContentTokenCount", "cached_content_token_count");
+            int cacheMiss = firstInt(usage,
+                    "prompt_cache_miss_tokens", "promptCacheMissTokens",
+                    "cache_creation_input_tokens", "cacheCreationInputTokens");
+            if (cacheHit < 0) {
+                cacheHit = 0;
+            }
+            if (cacheMiss < 0) {
+                cacheMiss = 0;
+            }
+            if (cacheHit > 0) {
+                // Some endpoints report only the hit side; the remainder of the
+                // prompt was billed as a miss.
+                cacheHit = Math.min(cacheHit, prompt > 0 ? prompt : cacheHit);
+                if (cacheMiss <= 0 && prompt > cacheHit) {
+                    cacheMiss = prompt - cacheHit;
+                }
+            }
+            return new TokenUsage("", "", prompt, completion, total, 0, 0, "", cacheHit, cacheMiss);
         } catch (Exception ignored) {
             return null;
         }
