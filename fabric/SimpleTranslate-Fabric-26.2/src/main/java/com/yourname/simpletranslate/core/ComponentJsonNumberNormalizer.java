@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonPrimitive;
+import com.yourname.simpletranslate.config.ModConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -44,9 +45,16 @@ public final class ComponentJsonNumberNormalizer {
      */
     private static final Pattern NUMBER_SUFFIX_SPLIT = Pattern.compile(
             "^([+-]?\\d+(?:[.,:]\\d+)*(?:\\s*/\\s*[+-]?\\d+(?:[.,:]\\d+)*)?)(.*)$");
-    static final Pattern PROMPT_DYNAMIC_NUMBER_PATTERN = Pattern.compile(
+    /**
+     * Boundary-guarded number candidate. A digit run that touches a letter or
+     * another digit ("Player123", "min15") is never treated as a standalone
+     * value, so widening the mask to every number cannot split identifiers,
+     * commands or player names.
+     */
+    private static final Pattern STABLE_VALUE_CANDIDATE = Pattern.compile(
             "(?<![\\p{L}\\p{N}_])[+-]?\\d+(?:[.,:]\\d+)*(?:\\s*/\\s*[+-]?\\d+(?:[.,:]\\d+)*)?%?"
                     + "(?i:st|nd|rd|th|ms|[xdhms])?(?![\\p{L}\\p{N}_])");
+    static final Pattern PROMPT_DYNAMIC_NUMBER_PATTERN = STABLE_VALUE_CANDIDATE;
 
     private ComponentJsonNumberNormalizer() {
     }
@@ -120,12 +128,13 @@ public final class ComponentJsonNumberNormalizer {
         if (text == null || text.isEmpty()) {
             return text;
         }
-        Matcher matcher = DYNAMIC_VALUE_CANDIDATE.matcher(text);
+        boolean maskAll = ModConfig.MASK_ALL_NUMBERS_ENABLED.get();
+        Matcher matcher = (maskAll ? STABLE_VALUE_CANDIDATE : DYNAMIC_VALUE_CANDIDATE).matcher(text);
         StringBuilder sb = new StringBuilder(text.length());
         int cursor = 0;
         while (matcher.find()) {
             sb.append(text, cursor, matcher.start());
-            if (isDynamicValue(text, matcher.start(), matcher.end())) {
+            if (maskAll || isDynamicValue(text, matcher.start(), matcher.end())) {
                 // Mask only the numeric part; keep the unit suffix (%, st/nd/rd/th,
                 // ms, x/d/h/m/s) as literal text after the marker so the translator
                 // can see the unit grammar and restore stays exact.
@@ -495,10 +504,11 @@ public final class ComponentJsonNumberNormalizer {
         }
         Matcher matcher = PROMPT_DYNAMIC_NUMBER_PATTERN.matcher(readable);
         StringBuilder masked = new StringBuilder(readable.length());
+        boolean maskAll = ModConfig.MASK_ALL_NUMBERS_ENABLED.get();
         int cursor = 0;
         while (matcher.find()) {
             masked.append(readable, cursor, matcher.start());
-            if (isDynamicValue(readable, matcher.start(), matcher.end())) {
+            if (maskAll || isDynamicValue(readable, matcher.start(), matcher.end())) {
                 // Same split as the request masking: the unit suffix stays visible
                 // so prompt context matches the masked request shape ("every <number>m").
                 Matcher split = NUMBER_SUFFIX_SPLIT.matcher(matcher.group());

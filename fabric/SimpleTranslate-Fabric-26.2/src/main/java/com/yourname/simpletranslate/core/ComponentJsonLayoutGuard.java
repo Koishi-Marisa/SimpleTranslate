@@ -21,6 +21,13 @@ import java.util.Set;
  * translation. Used by {@link JsonPassthroughPipeline}.</p>
  */
 public final class ComponentJsonLayoutGuard {
+    /**
+     * Mod-owned CJK font that survives a server resource pack replacing
+     * {@code minecraft:default}. Declared by
+     * {@code assets/simple_translate/font/cjk.json}.
+     */
+    private static final String CJK_FALLBACK_FONT_ID = ActiveFontManager.CJK_FALLBACK_FONT.toString();
+
     private ComponentJsonLayoutGuard() {
     }
 
@@ -147,7 +154,11 @@ public final class ComponentJsonLayoutGuard {
 
     private static void sanitizeTranslatedFonts(JsonElement element, boolean inheritedCustomFont,
                                                 boolean inheritedLayoutFont) {
-        if (!ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get() || element == null || element.isJsonNull()) {
+        // The two font fixes are independent: the historical custom-font repair
+        // and the server-pack CJK remount can each be switched off alone.
+        boolean remountCustomFontCjk = ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get();
+        boolean forceFallbackCjk = ModConfig.FORCE_TRANSLATED_CJK_FONT_ENABLED.get();
+        if ((!remountCustomFontCjk && !forceFallbackCjk) || element == null || element.isJsonNull()) {
             return;
         }
         if (element.isJsonArray()) {
@@ -178,14 +189,22 @@ public final class ComponentJsonLayoutGuard {
         // Layout fonts encode absolute screen coordinates. Remounting CJK onto
         // minecraft:default while leaving PUA siblings on the layout font splits
         // the coordinate system and collapses multi-region actionbars.
-        if (effectiveCustomFont && !effectiveLayoutFont && !puaLayoutFont && text != null) {
-            if (containsCjk(text)) {
+        boolean effectiveDefaultFont = hasDefaultFont(object) || !effectiveCustomFont;
+        if (!effectiveDefaultFont && !effectiveLayoutFont && !puaLayoutFont && text != null) {
+            if (remountCustomFontCjk && containsCjk(text)) {
                 if (containsProtectedFontRuns(text)) {
                     splitMixedCustomFontText(object, text);
                 } else {
                     object.addProperty("font", "minecraft:default");
                 }
             }
+        } else if (effectiveDefaultFont && !effectiveLayoutFont && forceFallbackCjk) {
+            // Server resource packs routinely replace the glyphs behind Chinese
+            // codepoints with their own UI icons. Translated Chinese must be
+            // painted with the mod-owned fallback font instead of the pack
+            // font; only the CJK runs move, so icons, coordinates and legacy
+            // format pairs keep the inherited font.
+            remountCjkRunsOnFallbackFont(object, text);
         }
 
         boolean childInheritedCustomFont = hasCustomFont(object)
@@ -434,6 +453,111 @@ public final class ComponentJsonLayoutGuard {
         }
         object.addProperty("text", "");
         object.add("extra", split);
+    }
+
+    /**
+     * Paints every CJK run of a text with the mod-owned fallback font. Non-CJK
+     * runs, legacy format pairs and private-use positioning glyphs keep the
+     * inherited font, so the split can never move a server icon or coordinate
+     * glyph onto another metric space.
+     */
+    private static void remountCjkRunsOnFallbackFont(JsonObject object, String text) {
+        if (text == null || text.isEmpty() || !containsCjk(text)) {
+            return;
+        }
+        if (isPureCjkRun(text)) {
+            object.addProperty("font", CJK_FALLBACK_FONT_ID);
+            return;
+        }
+        JsonArray existingExtra = object.has("extra") && object.get("extra").isJsonArray()
+                ? object.getAsJsonArray("extra")
+                : null;
+        JsonArray split = new JsonArray();
+        int index = 0;
+        while (index < text.length()) {
+            int cp = text.codePointAt(index);
+            boolean cjkRun;
+            int end;
+            if (cp == '\u00a7' && index + 1 < text.length()) {
+                cjkRun = false;
+                end = index + 1 + Character.charCount(text.codePointAt(index + 1));
+            } else {
+                cjkRun = isForcedCjkFontCodepoint(cp);
+                end = index + Character.charCount(cp);
+                while (end < text.length()) {
+                    int next = text.codePointAt(end);
+                    if (next == '\u00a7' && end + 1 < text.length()) {
+                        break;
+                    }
+                    if (isForcedCjkFontCodepoint(next) != cjkRun) {
+                        break;
+                    }
+                    end += Character.charCount(next);
+                }
+            }
+            JsonObject segment = object.deepCopy();
+            segment.addProperty("text", text.substring(index, end));
+            segment.remove("extra");
+            if (cjkRun) {
+                segment.addProperty("font", CJK_FALLBACK_FONT_ID);
+            }
+            split.add(segment);
+            index = end;
+        }
+        if (existingExtra != null) {
+            for (JsonElement child : existingExtra) {
+                split.add(child);
+            }
+        }
+        object.addProperty("text", "");
+        object.add("extra", split);
+    }
+
+    private static boolean isPureCjkRun(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); ) {
+            int cp = text.codePointAt(i);
+            if (!isForcedCjkFontCodepoint(cp)) {
+                return false;
+            }
+            i += Character.charCount(cp);
+        }
+        return true;
+    }
+
+    /**
+     * True for codepoints that must be painted with a real CJK font: Han, kana,
+     * Hangul and Bopomofo scripts plus their punctuation, compatibility and
+     * fullwidth blocks. Private-use glyphs, legacy format pairs and control
+     * characters are deliberately excluded.
+     */
+    private static boolean isForcedCjkFontCodepoint(int cp) {
+        if (cp == '\u00a7' || isFontSplitProtected(cp)) {
+            return false;
+        }
+        Character.UnicodeScript script = Character.UnicodeScript.of(cp);
+        if (script == Character.UnicodeScript.HAN
+                || script == Character.UnicodeScript.HIRAGANA
+                || script == Character.UnicodeScript.KATAKANA
+                || script == Character.UnicodeScript.HANGUL
+                || script == Character.UnicodeScript.BOPOMOFO) {
+            return true;
+        }
+        return (cp >= 0x2E80 && cp <= 0x2EFF)
+                || (cp >= 0x2F00 && cp <= 0x2FDF)
+                || (cp >= 0x3000 && cp <= 0x303F)
+                || (cp >= 0x3190 && cp <= 0x319F)
+                || (cp >= 0x31A0 && cp <= 0x31BF)
+                || (cp >= 0x31C0 && cp <= 0x31EF)
+                || (cp >= 0x3200 && cp <= 0x33FF)
+                || (cp >= 0x3400 && cp <= 0x4DBF)
+                || (cp >= 0xF900 && cp <= 0xFAFF)
+                || (cp >= 0xFE10 && cp <= 0xFE1F)
+                || (cp >= 0xFE30 && cp <= 0xFE4F)
+                || (cp >= 0xFF00 && cp <= 0xFFEF)
+                || (cp >= 0x20000 && cp <= 0x2FA1F);
     }
 
     private static int countPrivateUseCodepoints(String text) {

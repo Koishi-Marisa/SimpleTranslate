@@ -79,6 +79,25 @@ public class ModConfig {
     public static final BooleanValue MOD_TIPS_ENABLED = bool("mods.tipsEnabled", true);
     public static final BooleanValue CUSTOM_FONT_CJK_FIX_ENABLED = bool("general.customFontCjkFixEnabled", true);
     /**
+     * Repaints translated CJK runs with the mod-owned fallback font
+     * ({@code simple_translate:cjk}) so a server resource pack that replaces
+     * Chinese codepoints with server-side UI icons cannot draw its own glyphs
+     * on translated text. Only CJK runs are remounted: Latin, digits, legacy
+     * format pairs and private-use positioning glyphs keep the inherited font,
+     * so layout-critical HUD trees are unaffected.
+     */
+    public static final BooleanValue FORCE_TRANSLATED_CJK_FONT_ENABLED =
+            bool("general.forceTranslatedCjkFontEnabled", true);
+    /**
+     * Masks every number in an outgoing translation request with the stable
+     * {@code [[Ni]]} placeholder, so a value that changes every tick
+     * ("Balance: 356 coins" to "Balance: 357 coins") can no longer re-translate
+     * the whole line. The client restores the live value locally from the
+     * source component before the translated text is rendered.
+     */
+    public static final BooleanValue MASK_ALL_NUMBERS_ENABLED =
+            bool("general.maskAllNumbersEnabled", true);
+    /**
      * When true, multi-region PUA-positioned HUD trees (including recognized
      * Wynncraft selector actionbars) keep the original. Default off: ordinary
      * layout HUDs retain their existing in-place path, while recognized Wynn
