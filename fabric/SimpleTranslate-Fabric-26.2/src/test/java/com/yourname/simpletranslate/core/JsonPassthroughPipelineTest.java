@@ -1,6 +1,9 @@
 package com.yourname.simpletranslate.core;
 
 import com.google.gson.JsonArray;
+import net.minecraft.SharedConstants;
+import net.minecraft.server.Bootstrap;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -10,6 +13,15 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 class JsonPassthroughPipelineTest {
+
+    @BeforeAll
+    static void bootstrapMinecraft() {
+        // Decoding a Component through ComponentSerialization.CODEC initializes
+        // Style -> ClickEvent -> Dialog -> BuiltInRegistries, and the registry
+        // refuses to register anything until the vanilla bootstrap has run.
+        SharedConstants.tryDetectVersion();
+        Bootstrap.bootStrap();
+    }
 
     @Test
     void wynnDialogueContentRecoversAtEachSemanticSlot() {
