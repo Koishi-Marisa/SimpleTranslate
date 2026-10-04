@@ -154,7 +154,11 @@ public final class ComponentJsonLayoutGuard {
 
     private static void sanitizeTranslatedFonts(JsonElement element, boolean inheritedCustomFont,
                                                 boolean inheritedLayoutFont) {
-        if (!ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get() || element == null || element.isJsonNull()) {
+        // The two font fixes are independent: the historical custom-font repair
+        // and the server-pack CJK remount can each be switched off alone.
+        boolean remountCustomFontCjk = ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get();
+        boolean forceFallbackCjk = ModConfig.FORCE_TRANSLATED_CJK_FONT_ENABLED.get();
+        if ((!remountCustomFontCjk && !forceFallbackCjk) || element == null || element.isJsonNull()) {
             return;
         }
         if (element.isJsonArray()) {
@@ -187,15 +191,14 @@ public final class ComponentJsonLayoutGuard {
         // the coordinate system and collapses multi-region actionbars.
         boolean effectiveDefaultFont = hasDefaultFont(object) || !effectiveCustomFont;
         if (!effectiveDefaultFont && !effectiveLayoutFont && !puaLayoutFont && text != null) {
-            if (containsCjk(text)) {
+            if (remountCustomFontCjk && containsCjk(text)) {
                 if (containsProtectedFontRuns(text)) {
                     splitMixedCustomFontText(object, text);
                 } else {
                     object.addProperty("font", "minecraft:default");
                 }
             }
-        } else if (effectiveDefaultFont && !effectiveLayoutFont
-                && ModConfig.FORCE_TRANSLATED_CJK_FONT_ENABLED.get()) {
+        } else if (effectiveDefaultFont && !effectiveLayoutFont && forceFallbackCjk) {
             // Server resource packs routinely replace the glyphs behind Chinese
             // codepoints with their own UI icons. Translated Chinese must be
             // painted with the mod-owned fallback font instead of the pack
