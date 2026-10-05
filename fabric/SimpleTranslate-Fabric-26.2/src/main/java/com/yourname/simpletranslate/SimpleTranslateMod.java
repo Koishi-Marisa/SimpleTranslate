@@ -29,6 +29,7 @@ import com.yourname.simpletranslate.feature.sign.SignSelectionHighlighter;
 import com.yourname.simpletranslate.feature.sign.SignTranslationHelper;
 import com.yourname.simpletranslate.feature.tooltip.TooltipTranslationHelper;
 import com.yourname.simpletranslate.feature.tooltip.TooltipTranslationTriggerState;
+import com.yourname.simpletranslate.gui.UiCjkText;
 import com.yourname.simpletranslate.core.JsonPassthroughPipeline;
 import com.yourname.simpletranslate.core.TextContextMemory;
 import com.yourname.simpletranslate.transport.TranslationLanes;
@@ -178,8 +179,8 @@ public class SimpleTranslateMod implements ClientModInitializer {
         if (client == null || client.gui == null) {
             return;
         }
-        client.gui.hud.setOverlayMessage(
-                net.minecraft.network.chat.Component.translatable("chat.simple_translate.first_run_hint"), false);
+        client.gui.hud.setOverlayMessage(UiCjkText.own(
+                net.minecraft.network.chat.Component.translatable("chat.simple_translate.first_run_hint")), false);
     }
 
     private static String getWorldIdentifier() {

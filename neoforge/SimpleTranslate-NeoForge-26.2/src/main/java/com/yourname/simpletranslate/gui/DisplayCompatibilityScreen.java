@@ -8,6 +8,7 @@ import net.minecraft.network.chat.Component;
 /** Generic display compatibility that is not tied to one server. */
 public final class DisplayCompatibilityScreen extends ScrollableSettingsScreen {
     private boolean customFontCjkFix;
+    private boolean ownUiCjkFont;
     private boolean forceTranslatedCjkFont;
     private boolean maskAllNumbers;
 
@@ -15,6 +16,7 @@ public final class DisplayCompatibilityScreen extends ScrollableSettingsScreen {
         super(Component.translatable("screen.simple_translate.display_compatibility"), parent);
         this.contentWidth = 320;
         this.customFontCjkFix = ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get();
+        this.ownUiCjkFont = ModConfig.OWN_UI_CJK_FONT_ENABLED.get();
         this.forceTranslatedCjkFont = ModConfig.FORCE_TRANSLATED_CJK_FONT_ENABLED.get();
         this.maskAllNumbers = ModConfig.MASK_ALL_NUMBERS_ENABLED.get();
     }
@@ -28,6 +30,12 @@ public final class DisplayCompatibilityScreen extends ScrollableSettingsScreen {
                         (button, value) -> this.customFontCjkFix = value);
         withTooltip(customFont, "screen.simple_translate.settings.custom_font_cjk_fix.tooltip");
         addEntry(customFont);
+        CycleButton<Boolean> ownUiCjkFont = CycleButton.onOffBuilder(this.ownUiCjkFont)
+                .create(0, 0, this.contentWidth, 20,
+                        Component.translatable("screen.simple_translate.settings.own_ui_cjk_font"),
+                        (button, value) -> this.ownUiCjkFont = value);
+        withTooltip(ownUiCjkFont, "screen.simple_translate.settings.own_ui_cjk_font.tooltip");
+        addEntry(ownUiCjkFont);
         CycleButton<Boolean> translatedCjkFont = CycleButton.onOffBuilder(this.forceTranslatedCjkFont)
                 .create(0, 0, this.contentWidth, 20,
                         Component.translatable("screen.simple_translate.settings.force_translated_cjk_font"),
@@ -47,6 +55,7 @@ public final class DisplayCompatibilityScreen extends ScrollableSettingsScreen {
     @Override
     protected void saveSettings() {
         ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.set(this.customFontCjkFix);
+        ModConfig.OWN_UI_CJK_FONT_ENABLED.set(this.ownUiCjkFont);
         ModConfig.FORCE_TRANSLATED_CJK_FONT_ENABLED.set(this.forceTranslatedCjkFont);
         ModConfig.MASK_ALL_NUMBERS_ENABLED.set(this.maskAllNumbers);
     }

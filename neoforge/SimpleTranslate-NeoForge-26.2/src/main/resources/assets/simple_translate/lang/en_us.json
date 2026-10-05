@@ -10,6 +10,8 @@
   "screen.simple_translate.settings.direct_batch_delay.tooltip": "Set how long nearby text waits to merge; shorter is faster, longer uses fewer requests.",
   "screen.simple_translate.settings.custom_font_cjk_fix": "Fix CJK Custom Font Missing Glyphs",
   "screen.simple_translate.settings.custom_font_cjk_fix.tooltip": "When enabled, missing Chinese, Japanese, or Korean glyphs use the default font.",
+  "screen.simple_translate.settings.own_ui_cjk_font": "Real Chinese In This Mod's UI",
+  "screen.simple_translate.settings.own_ui_cjk_font.tooltip": "The mod's own screens, tooltips and status notices use the built-in CJK font, so a server resource pack that repaints Chinese with server UI icons cannot rewrite them.",
   "screen.simple_translate.settings.force_translated_cjk_font": "Force CJK Font For Translated Text",
   "screen.simple_translate.settings.force_translated_cjk_font.tooltip": "When enabled, Chinese, Japanese, and Korean text produced by translation is drawn with the mod's own font, so a server resource pack cannot replace it with custom icon glyphs.",
   "screen.simple_translate.settings.mask_all_numbers": "Keep Numbers Stable",

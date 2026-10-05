@@ -207,7 +207,8 @@ public final class SimpleTranslateClientBootstrap {
             return;
         }
         client.gui.hud.setOverlayMessage(
-                net.minecraft.network.chat.Component.translatable("chat.simple_translate.first_run_hint"), false);
+                com.yourname.simpletranslate.gui.UiCjkText.own(
+                        net.minecraft.network.chat.Component.translatable("chat.simple_translate.first_run_hint")), false);
     }
 
     private static String getWorldIdentifier() {

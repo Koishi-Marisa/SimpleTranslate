@@ -3,6 +3,8 @@ package com.yourname.simpletranslate.mixin;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.yourname.simpletranslate.config.ModConfig;
 import com.yourname.simpletranslate.core.ActiveFontManager;
+import com.yourname.simpletranslate.core.ComponentJsonLayoutGuard;
+import com.yourname.simpletranslate.gui.ModOwnedUiScreen;
 import net.minecraft.client.gui.font.FontSet;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -14,6 +16,12 @@ import org.spongepowered.asm.mixin.injection.At;
  * This includes {@code minecraft:default}: server resource packs can replace
  * that font with ASCII-only providers. Private-use icons stay on the original
  * font, and the fallback set itself never recurses.
+ *
+ * <p>Inside the mod's own screens ({@link ModOwnedUiScreen}) the mod additionally
+ * never accepts a pack-provided glyph for CJK code points, because such a pack
+ * usually does provide one (a server-side UI icon) and the missing-glyph check
+ * above would therefore never fire. Latin, digits and private-use icons keep the
+ * pack's glyphs, so only Chinese is forced onto the built-in font.
  */
 @Mixin(FontSet.class)
 public abstract class FontSetMixin {
@@ -24,8 +32,7 @@ public abstract class FontSetMixin {
     @ModifyReturnValue(method = "computeGlyphInfo", at = @At("RETURN"))
     private FontSet.SelectedGlyphs simple_translate$fallbackMissingGlyph(
             FontSet.SelectedGlyphs original, int codePoint) {
-        if (!ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get()
-                || original == null
+        if (original == null
                 || simple_translate$isPrivateUse(codePoint)
                 || Boolean.TRUE.equals(simple_translate$fallingBack.get())) {
             return original;
@@ -33,7 +40,16 @@ public abstract class FontSetMixin {
 
         FontSet self = (FontSet) (Object) this;
         FontSetAccessor selfAccess = (FontSetAccessor) self;
-        if (original != selfAccess.simple_translate$getMissingSelectedGlyphs()) {
+        // The mod's own screens always show real Chinese. A pack that repaints
+        // CJK code points with server-side UI icons does provide a glyph for
+        // them, so the missing-glyph fallback below can never fire: force the
+        // mod-owned font for this scope instead.
+        boolean ownUiCjk = ModConfig.OWN_UI_CJK_FONT_ENABLED.get()
+                && ModOwnedUiScreen.isActive()
+                && ComponentJsonLayoutGuard.isForcedCjkFontCodepoint(codePoint);
+        if (!ownUiCjk
+                && (!ModConfig.CUSTOM_FONT_CJK_FIX_ENABLED.get()
+                        || original != selfAccess.simple_translate$getMissingSelectedGlyphs())) {
             return original;
         }
 

@@ -534,7 +534,7 @@ public final class ComponentJsonLayoutGuard {
      * fullwidth blocks. Private-use glyphs, legacy format pairs and control
      * characters are deliberately excluded.
      */
-    private static boolean isForcedCjkFontCodepoint(int cp) {
+    public static boolean isForcedCjkFontCodepoint(int cp) {
         if (cp == '\u00a7' || isFontSplitProtected(cp)) {
             return false;
         }

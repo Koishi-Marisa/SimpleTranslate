@@ -10,6 +10,8 @@
   "screen.simple_translate.settings.direct_batch_delay.tooltip": "设置相邻文本等待合并的时间；越短显示越快，越长请求越少。",
   "screen.simple_translate.settings.custom_font_cjk_fix": "修复自定义字体中文缺字",
   "screen.simple_translate.settings.custom_font_cjk_fix.tooltip": "开启后，自定义字体缺少中文、日文或韩文字形时改用默认字体显示。",
+  "screen.simple_translate.settings.own_ui_cjk_font": "模组界面显示真实中文",
+  "screen.simple_translate.settings.own_ui_cjk_font.tooltip": "模组自身的界面、提示与状态消息使用内置中文字体绘制，服务器材质包把中文替换成服务器 UI 图标时不会影响它们。",
   "screen.simple_translate.settings.force_translated_cjk_font": "翻译文本强制使用中文字体",
   "screen.simple_translate.settings.force_translated_cjk_font.tooltip": "开启后，翻译生成的中文、日文、韩文使用模组自带字体绘制，服务器资源包无法用自定义图标字形替换它们。",
   "screen.simple_translate.settings.mask_all_numbers": "固定数字占位",

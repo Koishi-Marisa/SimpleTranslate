@@ -89,6 +89,15 @@ public class ModConfig {
     public static final BooleanValue FORCE_TRANSLATED_CJK_FONT_ENABLED =
             bool("general.forceTranslatedCjkFontEnabled", true);
     /**
+     * Keeps the mod's own screens and its own actionbar notices on the built-in
+     * CJK font. A server resource pack that repaints Chinese code points with
+     * server-side UI icons would otherwise also rewrite the mod's own titles,
+     * labels, tooltips and status messages. Only CJK runs are remounted, so
+     * Latin, digits and private-use icon layout keep the pack's glyphs.
+     */
+    public static final BooleanValue OWN_UI_CJK_FONT_ENABLED =
+            bool("general.ownUiCjkFontEnabled", true);
+    /**
      * Masks every number in an outgoing translation request with the stable
      * {@code [[Ni]]} placeholder, so a value that changes every tick
      * ("Balance: 356 coins" to "Balance: 357 coins") can no longer re-translate

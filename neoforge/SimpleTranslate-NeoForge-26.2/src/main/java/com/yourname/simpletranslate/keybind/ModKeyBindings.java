@@ -8,6 +8,7 @@ import com.yourname.simpletranslate.feature.tooltip.TooltipTranslationTriggerSta
 import com.yourname.simpletranslate.feature.tooltip.TooltipTranslationController;
 import com.yourname.simpletranslate.gui.BaseSimpleTranslateScreen;
 import com.yourname.simpletranslate.gui.SimpleTranslateScreen;
+import com.yourname.simpletranslate.gui.UiCjkText;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -247,7 +248,7 @@ public final class ModKeyBindings {
             SimpleTranslateMod.getLogger().error("Failed to open Simple Translate settings screen", t);
             if (minecraft.gui != null) {
                 minecraft.gui.hud.getChat().addClientSystemMessage(
-                        Component.translatable("screen.simple_translate.settings.open_failed"));
+                        UiCjkText.own(Component.translatable("screen.simple_translate.settings.open_failed")));
             }
         }
     }
@@ -265,7 +266,7 @@ public final class ModKeyBindings {
             Component mode = Component.translatable(next == ModConfig.TranslationMode.AUTO
                     ? "screen.simple_translate.mode.auto" : "screen.simple_translate.mode.button");
             minecraft.gui.hud.setOverlayMessage(
-                    Component.translatable("screen.simple_translate.mode.toggle_message", mode), false);
+                    UiCjkText.own(Component.translatable("screen.simple_translate.mode.toggle_message", mode)), false);
         }
     }
 
@@ -276,9 +277,9 @@ public final class ModKeyBindings {
         ModConfig.save();
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.gui != null) {
-            minecraft.gui.hud.setOverlayMessage(Component.translatable(enabled
+            minecraft.gui.hud.setOverlayMessage(UiCjkText.own(Component.translatable(enabled
                     ? "screen.simple_translate.global_toggle.enabled"
-                    : "screen.simple_translate.global_toggle.disabled"), false);
+                    : "screen.simple_translate.global_toggle.disabled")), false);
         }
     }
 }

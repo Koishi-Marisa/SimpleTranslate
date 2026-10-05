@@ -12,7 +12,7 @@ import net.minecraft.network.chat.Component;
 
 import java.time.Duration;
 
-public abstract class BaseSimpleTranslateScreen extends Screen {
+public abstract class BaseSimpleTranslateScreen extends Screen implements ModOwnedUiScreen {
     private static final Duration SETTINGS_TOOLTIP_DELAY = Duration.ofMillis(700);
 
     protected BaseSimpleTranslateScreen(Component title) {

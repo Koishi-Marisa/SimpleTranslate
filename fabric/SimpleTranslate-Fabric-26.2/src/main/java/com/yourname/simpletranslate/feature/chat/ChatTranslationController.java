@@ -8,6 +8,7 @@ import com.yourname.simpletranslate.transport.TranslationManager;
 import com.yourname.simpletranslate.feature.chat.ButtonMessageData;
 import com.yourname.simpletranslate.feature.hud.HudTranslationHistory;
 import com.yourname.simpletranslate.feature.tooltip.TooltipTranslationHelper;
+import com.yourname.simpletranslate.gui.UiCjkText;
 import net.minecraft.client.multiplayer.chat.GuiMessage;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
@@ -615,7 +616,7 @@ public final class ChatTranslationController {
 
     private static void showOutgoingStatus(Minecraft minecraft, String key, Object... args) {
         if (minecraft != null && minecraft.gui != null) {
-            minecraft.gui.hud.setOverlayMessage(Component.translatable(key, args), false);
+            minecraft.gui.hud.setOverlayMessage(UiCjkText.own(Component.translatable(key, args)), false);
         }
     }
 }
