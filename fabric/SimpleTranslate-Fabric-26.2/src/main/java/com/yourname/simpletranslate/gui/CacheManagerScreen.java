@@ -33,6 +33,7 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
     private static final int SEARCH_WIDTH = 220;
     private static final int ROW_HEIGHT = 18;
     private static final int LIST_TOP = 122;
+    private static final int BOTTOM_ACTION_WIDTH = 340;
     private static final DateTimeFormatter SHARE_FILE_TIME = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     private final Screen parent;
@@ -42,9 +43,12 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
     private Button exportButton;
     private Button importButton;
     private Button editButton;
+    private Button deleteButton;
+    private Button clearButton;
     private Button serverShareButton;
     private Component statusMessage = Component.empty();
     private int statusColor = 0xFFAAAAAA;
+    private final CacheClearConfirmation clearConfirmation = new CacheClearConfirmation();
 
     public CacheManagerScreen(Screen parent) {
         super(Component.translatable("screen.simple_translate.cache_manager"));
@@ -99,9 +103,11 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
 
         // Bottom buttons
         int buttonY = this.height - 50;
-        int buttonWidth = 60;
         int spacing = 5;
-        int totalWidth = buttonWidth * 4 + spacing * 3;
+        int buttonCount = 6;
+        int buttonWidth = Math.max(30,
+                Math.min(60, (bottomActionWidth() - spacing * (buttonCount - 1)) / buttonCount));
+        int totalWidth = buttonWidth * buttonCount + spacing * (buttonCount - 1);
         int startX = centerX - totalWidth / 2;
 
         this.editButton = Button.builder(
@@ -112,10 +118,18 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
         withTooltip(this.editButton, "screen.simple_translate.cache.edit.tooltip");
         this.addRenderableWidget(this.editButton);
 
+        this.deleteButton = Button.builder(
+                Component.translatable("screen.simple_translate.cache.delete"),
+                button -> deleteSelectedEntry())
+                .bounds(startX + (buttonWidth + spacing), buttonY, buttonWidth, 20)
+                .build();
+        withTooltip(this.deleteButton, "screen.simple_translate.cache.delete.tooltip");
+        this.addRenderableWidget(this.deleteButton);
+
         this.exportButton = Button.builder(
                 Component.translatable("screen.simple_translate.export"),
                 button -> exportCache())
-                .bounds(startX + buttonWidth + spacing, buttonY, buttonWidth, 20)
+                .bounds(startX + (buttonWidth + spacing) * 2, buttonY, buttonWidth, 20)
                 .build();
         withTooltip(this.exportButton, "screen.simple_translate.cache.export.tooltip");
         this.addRenderableWidget(this.exportButton);
@@ -123,15 +137,23 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
         this.importButton = Button.builder(
                 Component.translatable("screen.simple_translate.import"),
                 button -> importCache())
-                .bounds(startX + (buttonWidth + spacing) * 2, buttonY, buttonWidth, 20)
+                .bounds(startX + (buttonWidth + spacing) * 3, buttonY, buttonWidth, 20)
                 .build();
         withTooltip(this.importButton, "screen.simple_translate.cache.import.tooltip");
         this.addRenderableWidget(this.importButton);
 
+        this.clearButton = Button.builder(
+                Component.translatable("screen.simple_translate.cache.clear"),
+                button -> clearCache())
+                .bounds(startX + (buttonWidth + spacing) * 4, buttonY, buttonWidth, 20)
+                .build();
+        withTooltip(this.clearButton, "screen.simple_translate.cache.clear.tooltip");
+        this.addRenderableWidget(this.clearButton);
+
         Button backButton = Button.builder(
                 Component.translatable("screen.simple_translate.back"),
                 button -> this.onClose())
-                .bounds(startX + (buttonWidth + spacing) * 3, buttonY, buttonWidth, 20)
+                .bounds(startX + (buttonWidth + spacing) * 5, buttonY, buttonWidth, 20)
                 .build();
         withTooltip(backButton, "screen.simple_translate.back.tooltip");
         this.addRenderableWidget(backButton);
@@ -230,6 +252,66 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
         CacheEntry selected = this.cacheList.getSelected();
         if (selected != null) {
             Minecraft.getInstance().gui.setScreen(new CacheEditScreen(this, selected.key));
+        }
+    }
+
+    /**
+     * Removes the selected cache entry so the next render of that text asks the
+     * translation service again.
+     */
+    private void deleteSelectedEntry() {
+        CacheEntry selected = this.cacheList == null ? null : this.cacheList.getSelected();
+        TranslationCache cache = SimpleTranslateMod.getTranslationCache();
+        if (selected == null || cache == null || cache.getEntry(selected.key).isEmpty()) {
+            refreshCacheList();
+            setStatus(Component.translatable("screen.simple_translate.cache.delete.none"), 0xFFCC66);
+            return;
+        }
+        cache.remove(selected.key);
+        cache.saveNow();
+        SimpleTranslateMod.onTranslationCacheEdited();
+        resetClearConfirmation();
+        refreshCacheList();
+        setStatus(Component.translatable("screen.simple_translate.cache.delete.done"), 0xFF88FF88);
+    }
+
+    /**
+     * Clears every stored translation. Because this cannot be undone, the first
+     * click only arms the action and the same button must be clicked again
+     * inside {@link CacheClearConfirmation#WINDOW_MILLIS}.
+     */
+    private void clearCache() {
+        TranslationCache cache = SimpleTranslateMod.getTranslationCache();
+        if (cache == null) {
+            return;
+        }
+        int count = cache.size();
+        if (count == 0) {
+            resetClearConfirmation();
+            setStatus(Component.translatable("screen.simple_translate.cache.clear.empty"), 0xFFAAAAAA);
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (this.clearConfirmation.armIfDisarmed(now)) {
+            if (this.clearButton != null) {
+                this.clearButton.setMessage(
+                        Component.translatable("screen.simple_translate.cache.clear.confirm"));
+            }
+            setStatus(Component.translatable("screen.simple_translate.cache.clear.warning", count), 0xFFCC66);
+            return;
+        }
+        cache.clear();
+        cache.saveNow();
+        SimpleTranslateMod.onTranslationCacheEdited();
+        resetClearConfirmation();
+        refreshCacheList();
+        setStatus(Component.translatable("screen.simple_translate.cache.clear.done", count), 0xFF88FF88);
+    }
+
+    private void resetClearConfirmation() {
+        this.clearConfirmation.reset();
+        if (this.clearButton != null) {
+            this.clearButton.setMessage(Component.translatable("screen.simple_translate.cache.clear"));
         }
     }
 
@@ -371,6 +453,10 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
         // Draw title
         graphics.centeredText(this.font, this.title, this.width / 2, 15, 0xFFFFFFFF);
 
+        if (this.clearConfirmation.expireIfElapsed(System.currentTimeMillis())) {
+            resetClearConfirmation();
+        }
+
         // Draw stats
         TranslationCache cache = SimpleTranslateMod.getTranslationCache();
         int count = cache != null ? cache.size() : 0;
@@ -414,6 +500,12 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
         if (this.editButton != null) {
             this.editButton.active = hasSelection;
         }
+        if (this.deleteButton != null) {
+            this.deleteButton.active = hasSelection;
+        }
+        if (this.clearButton != null) {
+            this.clearButton.active = count > 0;
+        }
         if (this.serverShareButton != null) {
             this.serverShareButton.setMessage(serverShareLabel());
         }
@@ -424,10 +516,15 @@ public class CacheManagerScreen extends BaseSimpleTranslateScreen {
 
     private void drawBottomActionMask(GuiGraphicsExtractor graphics) {
         int top = this.height - 60;
-        int left = Math.max(0, this.width / 2 - 150);
-        int right = Math.min(this.width, this.width / 2 + 150);
+        int half = Math.max(150, bottomActionWidth() / 2);
+        int left = Math.max(0, this.width / 2 - half);
+        int right = Math.min(this.width, this.width / 2 + half);
         graphics.fill(left, top, right, this.height - 2, 0xAA101010);
         graphics.fill(left, top, right, top + 1, 0x55FFFFFF);
+    }
+
+    private int bottomActionWidth() {
+        return Math.min(Math.max(120, this.width - 20), BOTTOM_ACTION_WIDTH);
     }
 
     private int listWidth() {
